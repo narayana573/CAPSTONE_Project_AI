@@ -9,7 +9,7 @@ OUTPUT_DIR = "outputs"
 # --- CONFIGURATION ---
 MODEL = "deepseek-r1:1.5b"  # The AI model you are using
 MAX_RETRIES = 5             # Maximum times Agent 3 can ask Agent 2 to fix the code
-PDF_PATH = r"D:\VS_code\CAPSTONE_Project\Requirement.pdf"
+PDF_PATH = r"D:\VS_code\CAPSTONE_Project_AI\Requirement.pdf"
 
 # --- AGENT 1: THE REQUIREMENT EXTRACTOR ---
 def agent_1_read_pdf(file_path):
