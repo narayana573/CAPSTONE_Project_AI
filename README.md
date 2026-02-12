@@ -1,107 +1,93 @@
 
+# AI-Driven Playwright Test Automation Factory
 
-# Multi-Agent QE Automation Generator (Capstone Project)
+### Capstone Project: Multi-Agent System for Requirement-to-Code Generation
 
-## 📌 Project Overview
+## ## Overview
 
-This project is an AI-powered multi-agent system designed to automate the creation of software test scripts. It uses a **self-healing loop** where three distinct agents collaborate to transform a PDF requirements document into high-quality Playwright TypeScript code.
-
----
-
-## 🛠 Prerequisites
-
-Before running the code, ensure your system meets the following requirements:
-
-### 1. Hardware Requirements
-
-* **RAM:** Minimum 8GB (16GB recommended for smooth LLM performance).
-* **GPU:** Optional, but helps with faster AI response times.
-
-### 2. Software & Local LLM Setup
-
-* **Python 3.10+**: [Download here](https://www.python.org/downloads/).
-* **Ollama**: This project runs AI models locally for privacy and cost-efficiency.
-* [Download Ollama](https://ollama.com/) and install it.
-* Open your terminal/command prompt and run:
-```bash
-ollama pull deepseek-r1:1.5b
-
-```
-
-
-
-
-* **Node.js**: Required to eventually run the generated Playwright scripts. [Download here](https://nodejs.org/).
+This project implements a sophisticated **Multi-Agent System (MAS)** that automates the creation of Playwright end-to-end tests from PDF requirement documents. It leverages local LLMs (via Ollama) and parallel processing to achieve high-speed, high-accuracy code generation with an integrated "self-healing" review loop.
 
 ---
 
-## 🚀 Installation & Setup
+## ## System Architecture
 
-1. **Create a Project Folder:**
-```bash
-mkdir CAPSTONE_Project_AI
-cd CAPSTONE_Project_AI
+The system is composed of three specialized agents that operate in a sequential and iterative pipeline:
 
-```
-
-
-2. **Install Python Libraries:**
-Run the following command to install the necessary tools for PDF reading and AI communication:
-```bash
-pip install pymupdf ollama
-
-```
-
-
-3. **Prepare Your Requirements:**
-* Place your Software Requirements Specification (SRS) PDF in your project folder.
-* Update the `PDF_PATH` in the code to match your file location (e.g., `D:\VS_code\CAPSTONE_Project_AI\Requirement.pdf`).
-
-
+1. **Agent 1 (The Parser):** Reads the raw PDF, identifies functional requirements (FRs), and structures them into a local SQLite database.
+2. **Agent 2 & 2.1 (The Coders):** High-speed workers that generate Playwright TypeScript code based on strict requirement traceability.
+3. **Agent 3 (The Reviewer):** A Senior QA Lead agent that validates the generated code against the original requirements and provides feedback for fixes.
 
 ---
 
-## 🤖 Agent Architecture
+## ## Detailed Component Explanation
 
-| Agent | Role | Responsibility |
+### ### 1. Database Layer (`requirements.db`)
+
+Unlike simple scripts, this system uses **SQLite** for persistence.
+
+* **Purpose:** Tracks the state of every requirement (Pending, Code Generated, Approved, Needs Fix).
+* **Benefits:** Prevents data loss and allows the system to skip requirements that are already approved, focusing only on failures during retries.
+
+### ### 2. The Agents (`agents.py`)
+
+#### #### Agent 1: PDF Extractor
+
+* **Library:** `PyMuPDF` (fitz).
+* **Logic:** Uses Regular Expressions (`FR-[\w]+`) to segment the PDF into individual requirement blocks.
+* **Mapping:** It breaks down the text into specific fields: *ID, Feature Name, Description, Preconditions, User Actions, Expected Behavior, and Validation Handling.*
+
+#### #### Agent 2 & 2.1: Parallel Generation
+
+* **Technology:** `ThreadPoolExecutor` with `Ollama`.
+* **Logic:** To increase performance, the workload is split between two virtual workers.
+* **Strict Prompting:** The agent is forced to follow a "Traceability Task" where it must map every requirement field to a specific block of Playwright code (e.g., Expected Behavior must become an `expect()` assertion).
+
+#### #### Agent 3: Parallel Reviewer
+
+* **Logic:** Evaluates the generated code.
+* **Success Condition:** If the code is perfect, it issues a `PASS`.
+* **Failure Condition:** If issues are found, it generates a `FIX:` list. This feedback is fed back into Agent 2 for the next attempt, creating a **Self-Correction Loop**.
+
+### ### 3. Orchestration (`main.py`)
+
+This is the "Brain" of the operation.
+
+* **The Loop:** It runs for a maximum of `MAX_RETRIES` (default 3).
+* **Smart Filtering:** In each attempt, it queries the database for requirements that *failed* the previous review and sends only those back to Agent 2 for fixing.
+* **Artifacts:** Saves logs, reviews, and code for every attempt in the `outputs/` folder.
+
+---
+
+## ## Workflow Execution Flow
+
+1. **Initialization:** `init_database()` creates the schema.
+2. **Ingestion:** `agent_1_read_pdf()` populates the DB with requirements.
+3. **Iteration:**
+* **Agent 2/2.1** generate code in parallel.
+* **Agent 3** reviews code in parallel.
+* System saves logs for transparency.
+
+
+4. **Finalization:** `export_final_suite()` collects all **Approved** tests and merges them into a single, production-ready `final_suite.ts`.
+
+---
+
+## ## Performance Optimization Features
+
+| Feature | Technical Implementation | Impact |
 | --- | --- | --- |
-| **Agent 1** | Requirement Extractor | Reads the PDF and converts raw text into a format the AI understands. |
-| **Agent 2** | Playwright Developer | Acts as an SDET and writes TypeScript automation code based on the requirements. |
-| **Agent 3** | Quality Auditor | Reviews the code for "hallucinations" (fake methods) or missing test steps. |
+| **Parallelism** | `concurrent.futures.ThreadPoolExecutor` | 2x faster code generation and review. |
+| **Persistence** | SQLite3 with explicit commits | Reliable tracking and ability to resume work. |
+| **Clean Code** | Regex Post-processing | Removes LLM "markdown noise" (```) for valid `.ts` files. |
+| **Strict Traceability** | Field-specific LLM Prompting | Ensures 100% coverage of user actions and assertions. |
 
 ---
 
-## 🔄 The Self-Healing Loop
+## ## How to Run
 
-1. **Agent 1** extracts data from your PDF.
-2. **Agent 2** generates the first draft of the code.
-3. **Agent 3** audits the code.
-* **If Audit Passes:** The project finishes and saves the final code.
-* **If Audit Fails:** Agent 3 lists the errors (feedback). **Agent 2** receives this feedback and rewrites the code.
-* This repeats up to **5 times** to ensure the highest code quality.
-
-
+1. **Prepare Environment:** Ensure `Ollama` is running with `qwen2.5-coder:1.5b`.
+2. **Install Dependencies:** `pip install pymupdf ollama`
+3. **Configure Path:** Set `PDF_PATH` in `main.py` to your requirement document.
+4. **Execute:** `python main.py`
 
 ---
-
-## 📁 Output Artifacts
-
-Every time the agents run, the system saves the results in an `/outputs` folder for your review:
-
-* `attempt_X_code.ts`: The raw Playwright code generated at each step.
-* `attempt_X_review.txt`: The AI auditor's feedback and critique.
-* `final_code.ts`: The approved, final version of your test script.
-
----
-
-## 🖥 How to Run
-
-Simply run your Python script:
-
-```bash
-python your_script_name.py
-
-```
-
----
-
